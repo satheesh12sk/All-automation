@@ -50,7 +50,8 @@ Run all commands from the project folder (`/home/nd/New-ui-automation/All`).
 
 | What | Command | Approx. time |
 |---|---|---|
-| **Everything functional** (Discovery + Foundation + Mastery) in desktop Chromium | `npm test` | 2 h + |
+| **Everything: functional + responsive, one report** | `npm run test:all` | 2.5 h + |
+| Everything functional (Discovery + Foundation + Mastery), desktop Chromium only — **no responsive** | `npm test` | 2 h + |
 | Only tests tagged `@regression` | `npm run regression` | 2 h + |
 | Discovery only | `npx playwright test --project=chromium src/tests/discovery/discovery.spec.ts` | 10 min |
 | Foundation F1–F3 | `npm run foundation` | 35 min |

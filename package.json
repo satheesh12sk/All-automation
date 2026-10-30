@@ -5,6 +5,7 @@
   "description": "Playwright test-automation suite for the ALL app",
   "scripts": {
     "test": "playwright test --project=chromium",
+    "test:all": "playwright test --project=chromium --project=phone-android --project=phone-ios --project=tablet-ios --project=laptop-chromium --project=laptop-firefox --project=laptop-webkit --project=desktop-chromium --workers=2",
     "test:headed": "playwright test --headed",
     "regression": "node scripts/run-e2e.js --regression",
     "e2e": "node scripts/run-e2e.js",
