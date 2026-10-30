@@ -1,0 +1,20 @@
+TC_ID,Module,Proirity,Test Scenario,Precondition,Steps,Expected Result,Status,Can be Automated,Test Case Type,Automation File
+REG-073,M8,High,Verify whether user can read paragraph correctly in P1,User is on M8 module screen,"1. Start reading
+2. Speak aloud
+3. Submit",Reading captured successfully,Pass,yes,Positive,
+REG-074,M8,High,Verify whether user passes S1 when all criteria met,User is on M8 module screen,"1. Start reading
+2. Speak aloud
+3. Submit",PASS,Pass,yes,Positive,
+REG-075,M8,High,Verify full PASS flow to M9,User is on M8 module screen,"1. Complete modules sequentially
+2. Observe navigation",M9 reached,Pass,yes,Positive,
+REG-076,M8,Medium,Verify system handles network failure,User is on M8 module screen,1. Disconnect network,Handled,Pass,yes,Negative,
+REG-077,M9,High,Verify whether the user is able to identify and read the highlighted paragraph from the displayed image in P1,User is on M9 module screen,"1. View paragraph image
+2. Identify highlighted paragraph
+3. Speak
+4. Submit",Expected as per scenario,Pass,yes,Positive,
+REG-078,M9,High,Verify whether the user passes S1 when accuracy is greater than or equal to 80%,User is on M9 module screen,"1. Execute scenario
+2. Observe result",Expected as per scenario,Pass,yes,Positive,
+REG-079,M9,High,Verify whether the user is able to complete the full flow and reach M10 on successful attempts,User is on M9 module screen,"1. Execute scenario
+2. Observe result",Expected as per scenario,Pass,yes,Positive,
+REG-080,M9,High,Verify whether the system handles network interruptions during speech evaluation,User is on M9 module screen,"1. Execute scenario
+2. Observe result",Expected as per scenario,Pass,yes,Positive,

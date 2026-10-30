@@ -1,0 +1,7 @@
+# Build History
+
+- 2026-10-29: Project skeleton created.
+- 2026-10-29: Phase 0/1 — helpers (languages, UiCopy registry en/hi/te/kn, transitions, fakeMedia) and Discovery TC-001..TC-013 on the new UI (axl-test). TC-002 skipped: help-language popup removed from the new UI.
+- 2026-10-29: Phase 5 — responsive suite UI-01..UI-12 (src/tests/responsive) on a 7-profile device matrix; guest sessions minted in Chromium and reused across engines.
+- 2026-10-29: Phase 2/3 — Foundation F1 (TC-013..TC-019), F2 (TC-020), F3 (TC-021, TC-022) on the new UI: one game engine (FoundationPage.playCurrentStep) for Letter Train, Letter Hunt, Letter Launcher and Memory Challenge; F2/F3 start fresh guests via stageOverride.ts.
+- 2026-10-30: Mastery M4–M7 (testcase/M4-M7 - Sheet1.csv, REG-054..REG-072) — MasteryPage engine for Read Aloud + Self-Paced Reading practice and the S1/S2 showcases; specs mastery-m4..m7 via masterySuite.ts (`npm run mastery`). stageOverride.ts now opens M-levels (milestone_level "m4", lesson = step index) and follows the app's promotion; showcaseVerdict.ts stubs the server verdict (getSetResult/updateLearnerProfile) because the fake voice cannot pass server ASR. Sheet vs build, checked against the BUILD with annotations: S1 FAIL → P1 (config failRedirectStepId "p1-p2", sheet says P5); S1 PASS → P7 and S2 completes the milestone (sheet "P1 → S1 → M5"); no Word Wall step in M4–M8 (REG-057 fixme); M7 paragraph is static (no bottom-to-top movement, REG-067).

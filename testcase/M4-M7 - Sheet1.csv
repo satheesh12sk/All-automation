@@ -1,0 +1,58 @@
+TC_ID,Module,Proirity,Test Scenario,Precondition,Steps,Expected Result,Status,Can be Automated,Test Case Type,Automation File
+REG-054,M4,High,Verify whether the user is able to read the displayed sentence within the given time in P1,User is in M4 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Sentence should be displyed with the timer.,Pass,yes,Positive,
+REG-055,M4,High,Verify whether the user passes S1 when accuracy is greater than or equal to 80%,User is in M4 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Expected as per scenario,Pass,yes,Positive,
+REG-056,M4,High,Verify whether S1 FAIL navigates the user to P5,User is in M4 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Expected as per scenario,Pass,yes,Negative,
+REG-057,M4,High,Verify whether Word Wall loads correctly after S1,User is in M4 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Expected as per scenario,Pass,yes,Positive,
+REG-058,M4,High,Verify whether the user passes S2 when accuracy is greater than or equal to 80%,User is in M4 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Expected as per scenario,Pass,yes,Positive,
+REG-059,M4,High,Verify full PASS flow from P1 → S1 → M5,User is in M4 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Expected as per scenario,Pass,yes,Positive,
+REG-060,M4,High,Verify user cannot skip any module in the flow,User is in M4 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Expected as per scenario,Pass,yes,Negative,
+REG-061,M5,High,Verify whether the user is able to read the displayed sentence within the given time in P1,User is in M5 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Expected as per scenario,Pass,yes,Positive,
+REG-062,M5,High,Verify whether S1 FAIL navigates the user to P5,User is in M5 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Expected as per scenario,Pass,yes,Negative,
+REG-063,M5,High,Verify full PASS flow from P1 → S1 → M6,User is in M5 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Expected as per scenario,Pass,yes,Positive,
+REG-064,M6,High,Verify whether the user is able to read the displayed sentence within the given time in P1,User is in M6 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Expected as per scenario,Pass,yes,Positive,
+REG-065,M6,High,Verify whether S1 FAIL navigates the user to P5,User is in M6 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Expected as per scenario,Pass,yes,Negative,
+REG-066,M6,High,Verify full PASS flow from P1 → S1 → M7,User is in M6 flow,"1. Open module
+2. Perform action as per scenario
+3. Observe behavior",Expected as per scenario,Pass,yes,Positive,
+REG-067,M7,High,Verify whether the sentence is displayed from bottom to top correctly in P1,User is on M7 module screen,"1. View sentence
+2. Observe bottom-to-top movement
+3. Speak within time
+4. Submit",Behavior as expected,Pass,yes,Positive,
+REG-068,M7,High,Verify whether incorrect pronunciation is rejected in P1,User is on M7 module screen,"1. View sentence
+2. Observe bottom-to-top movement
+3. Speak within time
+4. Submit",System rejects input,Pass,yes,Negative,
+REG-069,M7,High,Verify whether the user passes S1 when accuracy meets the required threshold,User is on M7 module screen,"1. Complete modules
+2. Submit assessment
+3. Observe routing",User navigates to next milestone,Pass,yes,Positive,
+REG-070,M7,High,Verify whether S1 FAIL navigates the user to P5,User is on M7 module screen,"1. Complete modules
+2. Submit assessment
+3. Observe routing",Behavior as expected,Pass,yes,Negative,
+REG-071,M7,High,Verify whether the user completes the full flow and reaches M8 on success,User is on M7 module screen,"1. Perform action
+2. Observe system behavior",Flow works correctly,Pass,yes,Positive,
+REG-072,M7,Medium,Verify whether the system handles timeout during speaking,User is on M7 module screen,"1. Perform action
+2. Observe system behavior",Behavior as expected,Pass,yes,Negative,

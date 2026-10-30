@@ -1,0 +1,18 @@
+{
+  "rules": [
+    {
+      "id": "no-only",
+      "description": "Do not commit test.only",
+      "dir": "src/tests",
+      "ext": [".ts"],
+      "forbid": "\\btest\\.only\\("
+    },
+    {
+      "id": "no-hard-waits",
+      "description": "Use transitions.ts helpers instead of waitForTimeout",
+      "dir": "src",
+      "ext": [".ts"],
+      "forbid": "waitForTimeout\\("
+    }
+  ]
+}
