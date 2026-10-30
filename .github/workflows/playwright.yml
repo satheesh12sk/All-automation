@@ -1,34 +1,69 @@
 name: Playwright Tests
+
+# Manual only: Actions → "Playwright Tests" → "Run workflow", pick the suite, language and environment.
+# The full suite takes 2–3 h and creates guest learners on the target server, so it never runs on push.
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Which tests to run
+        type: choice
+        default: mastery
+        options:
+          - discovery    # TC-001..TC-013               ~10 min
+          - foundation   # F1–F3, TC-013..TC-022        ~40 min
+          - mastery      # M4–M9, REG-054..REG-080      ~70 min
+          - responsive   # UI-01..UI-17, 7 devices      ~20 min
+          - functional   # discovery + foundation + mastery (npm test)  ~2.5 h
+          - all          # functional + responsive (npm run test:all)   ~3 h
+      lang:
+        description: App language
+        type: choice
+        default: en
+        options: [en, hi]
+      env:
+        description: Environment (axl-test, UAT, LAB, LAB2)
+        type: string
+        default: axl-test
+
 jobs:
   test:
-    timeout-minutes: 60
+    name: ${{ inputs.suite }} (${{ inputs.lang }}, ${{ inputs.env }})
+    timeout-minutes: 240
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        lang: [en, hi]
+    env:
+      ENV: ${{ inputs.env }}
+      TEST_LANG: ${{ inputs.lang }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - name: Install browsers
+        run: |
+          if [ "${{ inputs.suite }}" = "responsive" ] || [ "${{ inputs.suite }}" = "all" ]; then
+            npx playwright install --with-deps chromium firefox webkit
+          else
+            npx playwright install --with-deps chromium
+          fi
       - run: npm run typecheck
-      - run: node scripts/run-e2e.js --regression --lang ${{ matrix.lang }}
-        env:
-          ENV: ${{ vars.ENV || 'axl-test' }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      - name: Run ${{ inputs.suite }}
+        run: |
+          case "${{ inputs.suite }}" in
+            discovery)  npx playwright test --project=chromium src/tests/discovery/discovery.spec.ts ;;
+            foundation) npm run foundation ;;
+            mastery)    npm run mastery ;;
+            responsive) npm run responsive ;;
+            functional) npm test -- --workers=2 ;;
+            all)        npm run test:all ;;
+          esac
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: reports-${{ matrix.lang }}
+          name: reports-${{ inputs.suite }}-${{ inputs.lang }}
           path: |
             playwright-report/
             tta-report/

@@ -236,9 +236,18 @@ Generated folders you can delete at any time: `tta-report/`, `playwright-report/
 
 ## 9. CI (GitHub Actions)
 
-`.github/workflows/playwright.yml` installs dependencies and Chromium, type-checks, then runs the `@regression` suite against `ENV` (repository variable, default `axl-test`). In CI, tests retry once and run on one worker.
+**Playwright Tests** (`.github/workflows/playwright.yml`) runs **manually only**:
 
----
+1. GitHub → **Actions** → **Playwright Tests** → **Run workflow** (branch `develop`).
+2. Choose:
+   - **suite** — `discovery` (~10 min), `foundation` (~40 min), `mastery` (~70 min), `responsive` (~20 min), `functional` (all three functional suites, ~2.5 h) or `all` (functional + responsive, ~3 h)
+   - **lang** — `en` (default) or `hi` (Hindi is not yet verified on axl-test)
+   - **env** — `axl-test` (default), `UAT`, `LAB`, `LAB2`
+3. When it finishes, download the **reports-&lt;suite&gt;-&lt;lang&gt;** artifact from the run page and open `tta-report/<timestamp>/index.html`.
+
+The job has a 4-hour limit, retries a failed test once, and installs Firefox/WebKit only for `responsive` and `all`.
+
+**Smoke Tests** (`.github/workflows/smoke-tests.yml`) runs the `@smoke` test daily at 03:00 UTC and can also be started by hand.
 
 ## 10. Troubleshooting
 
