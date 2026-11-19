@@ -1,10 +1,13 @@
+import { gotoApp } from '../../utils/appNav';
 import type { Locator, Page } from '@playwright/test';
 import { test, expect, runOn } from '../../fixtures/responsiveTest';
 import { AssessmentPage } from '../../pages/discovery/AssessmentPage';
 import { DiscoveryLoginPage } from '../../pages/discovery/LoginPage';
 import { LanguagePicker } from '../../pages/discovery/LanguagePicker';
 import { RoadmapPage } from '../../pages/discovery/RoadmapPage';
+import { resolveLanguage } from '../../../config/language';
 import { authFile, type GuestStage } from '../../utils/guestSession';
+import { languageByCode } from '../../utils/languages';
 import { expectNoHorizontalOverflow, expectReachable, findClippedText, findContrastIssues } from '../../utils/layoutAudit';
 
 /**
@@ -13,6 +16,9 @@ import { expectNoHorizontalOverflow, expectReachable, findClippedText, findContr
  * Zoom: at 200% a 1280x720 laptop lays pages out in a 640x360 CSS-px viewport, so the zoom case
  * resizes the viewport to that — the same media queries and reflow a real 200% zoom triggers.
  */
+
+/** The run's language (TEST_LANG), as the `lang` fixture gives it. */
+const lang = languageByCode(resolveLanguage());
 
 interface Screen {
   name: string;
@@ -25,12 +31,11 @@ const SCREENS: Screen[] = [
   {
     name: 'login',
     open: async (page) => {
-      const login = new DiscoveryLoginPage(page);
-      await login.navigate();
+      const login = await DiscoveryLoginPage.openIn(page, lang);
       await login.selectGuestTab();
     },
     controls: (page) => {
-      const login = new DiscoveryLoginPage(page);
+      const login = new DiscoveryLoginPage(page, lang);
       return { 'STUDENT tab': login.studentTab(), 'User ID': login.usernameInput(), Password: login.passwordInput(), Grade: login.gradeSelect(), 'LOGIN AS GUEST': login.loginButton() };
     },
   },
@@ -38,19 +43,19 @@ const SCREENS: Screen[] = [
     name: 'discover',
     session: 'discover',
     open: async (page) => {
-      await page.goto('/discover');
-      await new AssessmentPage(page).expectStartAssessmentVisible();
+      await gotoApp(page, '/discover');
+      await new AssessmentPage(page, lang).expectStartAssessmentVisible();
     },
-    controls: (page) => ({ 'language selector': new LanguagePicker(page).pill(), 'START ASSESSMENT': new AssessmentPage(page).startAssessmentButton() }),
+    controls: (page) => ({ 'language selector': new LanguagePicker(page).pill(), 'START ASSESSMENT': new AssessmentPage(page, lang).startAssessmentButton() }),
   },
   {
     name: 'roadmap',
     session: 'roadmap',
     open: async (page) => {
-      await page.goto('/roadmap');
-      await expect(new RoadmapPage(page).activeTile()).toBeVisible({ timeout: 30000 });
+      await gotoApp(page, '/roadmap');
+      await expect(new RoadmapPage(page, lang).activeTile()).toBeVisible({ timeout: 30000 });
     },
-    controls: (page) => ({ 'active stage tile': new RoadmapPage(page).activeTile(), 'START F1 ACTIVITY': new RoadmapPage(page).startActivityButton('F1') }),
+    controls: (page) => ({ 'active stage tile': new RoadmapPage(page, lang).activeTile(), 'START F1 ACTIVITY': new RoadmapPage(page, lang).startActivityButton('F1') }),
   },
 ];
 
@@ -66,7 +71,8 @@ for (const screen of SCREENS) {
 
       await expectNoHorizontalOverflow(page);
       expect(await findClippedText(page), 'text cut off at 200% zoom').toEqual([]);
-      for (const [name, control] of Object.entries(screen.controls(page))) await expectReachable(control, `${name} at 200% zoom`);
+      // Reachable, not necessarily enabled: LOGIN AS GUEST stays disabled until the form is filled in.
+      for (const [name, control] of Object.entries(screen.controls(page))) await expectReachable(control, `${name} at 200% zoom`, { requireEnabled: false });
     });
 
     test(`UI-12 typography and colour (${screen.name}): text contrast meets WCAG AA and headings stand out @responsive`, async ({ page }) => {

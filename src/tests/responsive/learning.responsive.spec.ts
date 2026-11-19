@@ -1,21 +1,23 @@
+import { gotoApp } from '../../utils/appNav';
 import { test, expect, runOn } from '../../fixtures/responsiveTest';
 import { RoadmapPage } from '../../pages/discovery/RoadmapPage';
 import { FoundationPage } from '../../pages/foundation/FoundationPage';
 import { authFile } from '../../utils/guestSession';
+import { overrideStage } from '../../utils/stageOverride';
 import { expectNoHorizontalOverflow, expectNoOverlap, expectReachable, expectUsableWithoutScrolling } from '../../utils/layoutAudit';
 
 /**
  * UI-05..UI-07 — Foundation journey map and game screens (UI/UX test plan §3).
- * Starts from the shared F1 guest in .auth/roadmap.json.
+ * Starts from the shared F1 guest in .auth/roadmap.json (roadmap-<lang>.json for other languages).
  */
 test.use({ storageState: authFile('roadmap') });
 
-test('UI-05 Foundation journey map: level pills and Start buttons reflow without overlap @responsive', async ({ page }) => {
+test('UI-05 Foundation journey map: level pills and Start buttons reflow without overlap @responsive', async ({ page, lang }) => {
   runOn('phone', 'tablet');
-  const roadmap = new RoadmapPage(page);
-  const foundation = new FoundationPage(page);
+  const roadmap = new RoadmapPage(page, lang);
+  const foundation = new FoundationPage(page, lang);
 
-  await page.goto('/roadmap');
+  await gotoApp(page, '/roadmap');
   await expect(roadmap.tiles().first()).toBeVisible({ timeout: 30000 });
   await expectNoHorizontalOverflow(page);
   await expectNoOverlap(roadmap.tiles(), 'roadmap tiles');
@@ -28,7 +30,7 @@ test('UI-05 Foundation journey map: level pills and Start buttons reflow without
   await expectUsableWithoutScrolling(roadmap.startActivityButton('F1'), 'START F1 ACTIVITY (intro)');
 
   await roadmap.startActivityButton('F1').click();
-  await page.waitForURL(/\/learn/);
+  await page.waitForURL(/\/learn(\?|$)/);
   await expect(foundation.stepPills().first()).toBeVisible({ timeout: 20000 });
   await expectNoHorizontalOverflow(page);
   await expectNoOverlap(foundation.stepPills(), 'level pills (L1 P1 … A3)');
@@ -38,12 +40,17 @@ test('UI-05 Foundation journey map: level pills and Start buttons reflow without
   }
 });
 
-test('UI-06 Letter Train: letter tiles and answer controls fit in the viewport @responsive', async ({ page }) => {
+test('UI-06 Letter Train: letter tiles and answer controls fit in the viewport @responsive', async ({ context, page, lang }) => {
   runOn('phone', 'tablet', 'laptop');
-  const roadmap = new RoadmapPage(page);
-  const foundation = new FoundationPage(page);
+  const roadmap = new RoadmapPage(page, lang);
+  const foundation = new FoundationPage(page, lang);
 
-  await page.goto('/roadmap');
+  // Always open F1 L1, and answer progress saves in the browser: the shared guest is used by
+  // every device project, and must not be moved past L1 by one of them.
+  await overrideStage(context, { stage: 'F1', lesson: 0 });
+  await context.route('**/lesson/addLesson', (route) =>
+    route.fulfill({ json: { query: null, result: route.request().postDataJSON(), error: null, message: 'Lesson added' } }));
+  await gotoApp(page, '/roadmap');
   await roadmap.startStageActivity('F1');
   // The shared guest may already be inside L1 (resumed); otherwise start it from the UP NEXT card.
   await expect(foundation.anyStartStepButton().or(foundation.bigLetter())).toBeVisible({ timeout: 20000 });

@@ -8,6 +8,7 @@ import { PlacementPage } from '../../pages/discovery/PlacementPage';
 import { RoadmapPage } from '../../pages/discovery/RoadmapPage';
 import { FoundationPage } from '../../pages/foundation/FoundationPage';
 import { mintGuestCredentials, newSharedAppPage } from '../../utils/DiscoveryHelper';
+import { copyRe } from '../../utils/UiCopy';
 
 /**
  * Discovery + F1 entry — TC-001..TC-013 (testcase/DiscoveryFullFlow.csv), on the new UI.
@@ -146,6 +147,6 @@ test.describe('Discovery + F1 entry', () => {
     const roadmap = new RoadmapPage(page, lang);
     await roadmap.expectActiveStage('F1');
     await roadmap.startStageActivity('F1');
-    await new FoundationPage(page, lang).expectStepIntro('L1', /Letter Train/i);
+    await new FoundationPage(page, lang).expectStepIntro('L1', copyRe('mechanicLetterTrain', lang));
   });
 });

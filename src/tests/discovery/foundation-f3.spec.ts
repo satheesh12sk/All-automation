@@ -1,9 +1,11 @@
+import { gotoApp } from '../../utils/appNav';
 import type { BrowserContext, Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/appTest';
 import { RoadmapPage } from '../../pages/discovery/RoadmapPage';
 import { FoundationPage, describeSteps } from '../../pages/foundation/FoundationPage';
 import { newSharedAppPage } from '../../utils/DiscoveryHelper';
 import { mintGuestSession } from '../../utils/guestSession';
+import { copyRe } from '../../utils/UiCopy';
 import { overrideStage } from '../../utils/stageOverride';
 
 /**
@@ -42,11 +44,11 @@ test.describe('Foundation F3', () => {
     test.setTimeout(40 * 60_000);
     test.info().annotations.push({ type: 'setup', description: 'Fresh guest opened on F3 via stage override (stageOverride.ts).' });
 
-    await page.goto('/roadmap');
+    await gotoApp(page, '/roadmap');
     const roadmap = new RoadmapPage(page, lang);
     await roadmap.expectActiveStage('F3');
     await roadmap.startStageActivity('F3');
-    await foundation.expectStepIntro('P1', /Letter Launcher/i);
+    await foundation.expectStepIntro('P1', copyRe('mechanicLetterLauncher', lang));
 
     const steps = await foundation.playNodes(['P1', 'P2', 'P3', 'P4', 'P5', 'A1']);
     test.info().annotations.push({ type: 'nodes played', description: describeSteps(steps) });

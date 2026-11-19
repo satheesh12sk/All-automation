@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { defineConfig, devices, type Project } from '@playwright/test';
-import { resolveBaseUrl } from './config/environments';
+import { resolveBaseUrl, serviceWorkerPolicy } from './config/environments';
 import { chromiumFakeMediaArgs, FIREFOX_FAKE_MEDIA_PREFS } from './src/utils/fakeMedia';
 
 /** Per-engine launch/permission settings for the fake mic (see src/utils/fakeMedia.ts). */
@@ -46,6 +46,7 @@ export default defineConfig({
   ],
   use: {
     baseURL: resolveBaseUrl(),
+    serviceWorkers: serviceWorkerPolicy(),
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

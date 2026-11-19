@@ -1,6 +1,8 @@
+import { gotoApp } from '../../utils/appNav';
 import type { BrowserContext, Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/appTest';
 import { RoadmapPage } from '../../pages/discovery/RoadmapPage';
+import { copyRe } from '../../utils/UiCopy';
 import { describeSteps } from '../../pages/foundation/FoundationPage';
 import type { AppLanguage } from '../../utils/languages';
 import { MasteryLevel, MasteryPage, MasteryStepResult } from '../../pages/mastery/MasteryPage';
@@ -12,8 +14,8 @@ import { overrideStage, StageHandle } from '../../utils/stageOverride';
 /**
  * Mastery M4–M9 regression (testcase/M4-M7 - Sheet1.csv, testcase/M8-M9 - Sheet1.csv), shared by mastery-m4…m9.spec.ts.
  *
- * Each file mints ONE fresh guest and opens it on its milestone (stageOverride.ts), so runs are
- * repeatable. Three journeys, each in its own browser context:
+ * Each file mints ONE fresh guest (in the run's language, TEST_LANG) and opens it on its milestone
+ * (stageOverride.ts), so runs are repeatable. Content and copy come from the app in that language. Three journeys, each in its own browser context:
  *   journey     P1 → … → S2 → "Milestone N Complete!" → roadmap on the next milestone
  *   S1 fail     opened on S1, the learner misreads every item (5 hearts) → back to practice
  *   P1 errors   (M7) wrong reading and a silent mic on P1 items
@@ -59,6 +61,15 @@ export interface MasterySheetCases {
   networkShowcase?: string;
 }
 
+/**
+ * UP NEXT card for P1: "P1 · Read Aloud". Soft on the mechanic name: the Telugu build shows
+ * "P1 · practice" (untranslated step type), which must be reported without stopping the journey.
+ */
+async function expectP1Intro(mastery: MasteryPage) {
+  await mastery.steps.expectStepIntro('P1');
+  await expect.soft(mastery.steps.stepIntroTitle(), 'UP NEXT names the mechanic (Read Aloud) in the learner\'s language').toHaveText(mastery.text('masteryReadAloudStep'));
+}
+
 const S1_ROUTE_NOTE = 'Sheet expects P5; this build sends S1 FAIL back to P1 (app config failRedirectStepId "p1-p2").';
 
 export function defineMasterySuite(cases: MasterySheetCases): void {
@@ -70,10 +81,6 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
     guest = await mintGuestSession('roadmap');
   });
 
-  test.beforeEach(async ({ lang }) => {
-    test.skip(lang.code !== 'en', 'Mastery reading content and copy are checked in English');
-  });
-
   /** Fresh context for the guest, opened on `lesson` of this milestone. */
   async function openOnMilestone(browser: Parameters<typeof newSharedAppPage>[0], testInfo: Parameters<typeof newSharedAppPage>[1], lesson = 0) {
     const { context, page } = await newSharedAppPage(browser, testInfo, guest);
@@ -82,7 +89,7 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
   }
 
   async function startMilestone(page: Page, lang: AppLanguage) {
-    await page.goto('/roadmap');
+    await gotoApp(page, '/roadmap');
     const roadmap = new RoadmapPage(page, lang);
     await roadmap.expectActiveStage(level);
     await roadmap.startStageActivity(level);
@@ -106,7 +113,7 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
         ({ context, page } = await openOnMilestone(browser, testInfo));
         mastery = new MasteryPage(page, lang);
         await startMilestone(page, lang);
-        await mastery.steps.expectStepIntro('P1', /Read Aloud/i);
+        await expectP1Intro(mastery);
         await mastery.steps.startCurrentStep();
       });
 
@@ -128,26 +135,26 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
 
           const first = await mastery.readCurrentItem('wrong');
           expect(first.percent, 'a wrong reading scores 0%').toBe(0);
-          expect(first.action).toMatch(/try again/i);
+          expect(first.action).toMatch(mastery.label('masteryTryAgain'));
           await expect(mastery.wrongWords(), 'misread words are marked red').toHaveCount(await mastery.words().count());
 
-          await mastery.clickAction(/try again/i);
-          await expect(page.locator('body')).toContainText(/try 2/i);
-          await expect(mastery.hint()).toHaveText(/watch the red words/i);
+          await mastery.clickAction(mastery.label('masteryTryAgain'));
+          await expect(page.locator('body')).toContainText(mastery.text('masteryTry', { vars: { attempt: 2 } }));
+          await expect(mastery.hint()).toHaveText(mastery.text('masteryPromptTry2'));
           const second = await mastery.readCurrentItem('wrong');
           expect(second.percent).toBe(0);
-          expect(second.action).toMatch(/read along/i);
+          expect(second.action).toMatch(mastery.label('masteryReadAlong'));
 
-          await mastery.clickAction(/read along/i);
-          await expect(page.locator('body')).toContainText(/read along/i);
-          await mastery.clickAction(/now i'?ll read/i);
-          await expect(page.locator('body')).toContainText(/final try/i);
+          await mastery.clickAction(mastery.label('masteryReadAlong'));
+          await expect(page.locator('body')).toContainText(mastery.text('masteryReadAlong'));
+          await mastery.clickAction(mastery.label('masteryNowIRead'));
+          await expect(page.locator('body')).toContainText(mastery.text('masteryFinalTry'));
           const last = await mastery.readCurrentItem('wrong');
           expect(last.percent).toBe(0);
-          expect(last.action, 'after the final try the learner moves on').toMatch(/next/i);
+          expect(last.action, 'after the final try the learner moves on').toMatch(mastery.label('masteryNext'));
           test.info().annotations.push({ type: 'feedback', description: [first, second, last].map((f) => `${f.percent}% ${f.headline} → ${f.action}`).join('\n') });
 
-          await mastery.clickAction(/^\s*next/i);
+          await mastery.clickAction(mastery.label('masteryNext'));
           await expect(page.locator('body')).toContainText(/2 \/ 10/);
           expect(await mastery.cardText(), 'next item is a new text').not.toBe(text);
         });
@@ -156,18 +163,20 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
       if (cases.speakTimeout) {
         test(`${cases.speakTimeout} ${level} P1 handles a timeout while speaking (mic hears nothing) @regression`, async () => {
           await mastery.expectReadingItem();
+          // The item's timer ("⏱ 20s") runs from when the item appears, and the recording ends with it.
+          const timeLeft = Number((await mastery.timerChip().innerText()).match(/\d+/)?.[0] ?? 20);
           const started = Date.now();
           const pending = mastery.readCurrentItem('silent');
           await expect(mastery.countdown(), 'recording countdown is shown').toHaveText(/00:\d\d/);
           const feedback = await pending;
           const seconds = Math.round((Date.now() - started) / 1000);
-          test.info().annotations.push({ type: 'timeout', description: `"${feedback.headline}" after ${seconds}s → ${feedback.action}` });
+          test.info().annotations.push({ type: 'timeout', description: `"${feedback.headline}" after ${seconds}s (${timeLeft}s left on the timer when the mic was tapped) → ${feedback.action}` });
 
-          expect(seconds, 'recording stops at the 20 s limit').toBeGreaterThanOrEqual(15);
-          await expect(page.locator('body')).toContainText(/couldn.t hear/i);
-          expect(feedback.action).toMatch(/try again/i);
+          expect(seconds, 'recording runs until the item\'s time is up').toBeGreaterThanOrEqual(Math.min(15, timeLeft - 3));
+          await expect(page.locator('body')).toContainText(mastery.text('masteryNoHear'));
+          expect(feedback.action).toMatch(mastery.label('masteryTryAgain'));
 
-          await mastery.clickAction(/try again/i);
+          await mastery.clickAction(mastery.label('masteryTryAgain'));
           await expect(mastery.micButton(), 'the learner can read again').toBeEnabled();
           const retry = await mastery.readCurrentItem('correct');
           expect(retry.percent).toBe(100);
@@ -214,7 +223,7 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
     async function expectShowcasePassed(step: MasteryStepResult, node: 'S1' | 'S2') {
       expect(step.node).toBe(node);
       expect(step.outcome, `${node} verdict`).toBe('pass');
-      expect(step.notes.join(' ')).toContain(`${node} passed`);
+      expect(step.notes.join(' ')).toMatch(mastery.text('showcasePassed', { vars: { step: node } }));
       expect(Math.min(...step.scores), `every ${node} item ≥ 80%`).toBeGreaterThanOrEqual(80);
     }
 
@@ -225,17 +234,20 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
       test.setTimeout(15 * 60_000);
       test.info().annotations.push({ type: 'setup', description: `Fresh guest opened on ${level} via stage override (stageOverride.ts).` });
       await startMilestone(page, lang);
-      await mastery.steps.expectStepIntro('P1', /Read Aloud/i);
+      await expectP1Intro(mastery);
       await mastery.steps.startCurrentStep();
 
       await mastery.expectReadingItem();
-      await expect(mastery.hint()).toHaveText(/read this aloud/i);
-      await expect(mastery.controlLabel()).toHaveText(/tap the mic, then read/i);
+      await expect(mastery.hint()).toHaveText(mastery.text('masteryPromptTry1'));
+      await expect(mastery.controlLabel()).toHaveText(mastery.text('masteryTapMic'));
       const text = await mastery.cardText();
       const timer = (await mastery.timerChip().innerText()).trim();
       test.info().annotations.push({ type: 'item', description: `${text} (${timer})` });
       if (cases.paragraph) {
-        expect(text.split(/(?<=[.!?]["”]?)\s+/).length, `${level} shows a paragraph (several sentences)`).toBeGreaterThan(1);
+        // Sentences end in . ! ? or । — counted even when the content misses the space after it.
+        expect(text.split(/(?<=[.!?।]["”]?)(?:\s+|(?=["“]?\p{L}))/u).length, `${level} shows a paragraph (several sentences)`).toBeGreaterThan(1);
+        const unspaced = text.match(/\S+[.!?।](?=\p{L})\S*/gu);
+        if (unspaced) test.info().annotations.push({ type: 'content issue', description: `No space after the full stop: ${unspaced.join(', ')}` });
       } else {
         expect(await mastery.words().count(), 'a sentence of several words').toBeGreaterThan(2);
       }
@@ -249,17 +261,17 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
 
       const feedback = await mastery.readCurrentItem('correct');
       expect(feedback.percent).toBe(100);
-      expect(feedback.headline).toMatch(/excellent/i);
-      expect(feedback.headline, 'read before the time ran out').not.toMatch(/time.s up/i);
-      expect(feedback.action).toMatch(/next/i);
+      expect(feedback.headline).toMatch(mastery.text('masteryExcellent'));
+      expect(feedback.headline, 'read before the time ran out').not.toMatch(mastery.text('masteryTimeUp'));
+      expect(feedback.action).toMatch(mastery.label('masteryNext'));
 
       // Rest of the P1-P2 pair: 9 more readings, then 10 self-paced texts with a word question each.
       const pair = await mastery.finishCurrentStep();
       played.add('P1');
       attachSteps([pair]);
       expect(pair.nextNode).toBe('P3');
-      expect(pair.notes.join('\n')).toMatch(/P1: 10 \/ 10 pieces read well/);
-      expect(pair.notes.join('\n')).toMatch(/P2: 10 \/ 10 questions answered right/);
+      expect(pair.notes.join('\n')).toMatch(new RegExp(`P1: 10 / 10 ${mastery.text('masteryPiecesReadWell').source}`, 'i'));
+      expect(pair.notes.join('\n')).toMatch(new RegExp(`P2: 10 / 10 ${mastery.text('selfPacedAnsweredRight').source}`, 'i'));
     });
 
     if (cases.noSkip) {
@@ -274,13 +286,13 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
         await s1.click({ force: true });
         await mastery.steps.expectStepIntro('P3');
 
-        await page.goto('/learn?step=s1');
+        await gotoApp(page, '/learn?step=s1');
         await mastery.steps.expectStepIntro('P3');
 
-        await page.goto('/roadmap');
+        await gotoApp(page, '/roadmap');
         const locked = page.locator('.all-milestone-tile--locked');
         await expect(locked.filter({ hasText: next! })).toHaveCount(1);
-        await expect(page.getByRole('button', { name: new RegExp(`start ${next} activity`, 'i') })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: copyRe('startMilestoneActivity', lang, { vars: { milestone: next! } }) })).toHaveCount(0);
         await locked.filter({ hasText: next! }).click({ force: true });
         await expect(page).toHaveURL(/\/roadmap/);
         await expect(new RoadmapPage(page, lang).activeTile()).toContainText(level);
@@ -332,7 +344,7 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
       if (!next) {
         // Last milestone: the course-complete screen replaces "Milestone N Complete!".
         test.info().annotations.push({ type: 'sheet mismatch', description: `Sheet expects ${level} → M10; the app has no M10 (M9 is the last milestone) and shows the course-complete screen.` });
-        await expect(page.getByText(/Hurray/i).first(), 'course-complete screen').toBeVisible();
+        await expect(page.getByText(mastery.text(['hurray', 'allMilestonesComplete'])).first(), 'course-complete screen').toBeVisible();
         const screen = await mastery.screenText();
         test.info().annotations.push({ type: 'end screen', description: screen.slice(0, 200) });
         expect.soft(screen, 'no untranslated copy keys (e.g. COURSE_COMPLETE_SUBTITLE) on the course-complete screen').not.toMatch(/\b[A-Z]{2,}(_[A-Z]+)+\b/);
@@ -341,12 +353,12 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
       }
 
       const n = level.slice(1);
-      await expect(page.getByText(new RegExp(`Milestone ${n} Complete!`, 'i'))).toBeVisible();
+      await expect(page.getByText(mastery.text('milestoneComplete', { vars: { number: n } }))).toBeVisible();
       await expect(page.getByText(next, { exact: true }).first()).toBeVisible();
       expect(stage.saved.at(-1), `progress saved on ${next}`).toMatchObject({ milestoneLevel: next.toLowerCase(), lesson: '0' });
       test.info().annotations.push({ type: 'route', description: `Sheet: "P1 → S1 → ${next}". Build: P1 → … → S1 → P7 → … → S2 → ${next}.` });
 
-      await page.getByRole('button', { name: /return to roadmap/i }).click();
+      await page.getByRole('button', { name: mastery.text('returnToRoadmap') }).click();
       const roadmap = new RoadmapPage(page, lang);
       await roadmap.expectActiveStage(next);
       await expect(page.locator('.all-milestone-tile--completed').filter({ hasText: `${level} ·` })).toHaveCount(1);
@@ -380,14 +392,14 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
           await context.setOffline(true);
           const offline = await mastery.readCurrentItem('correct');
           expect(offline.percent, 'reading is scored while offline').toBe(100);
-          await mastery.clickAction(/^\s*next/i);
+          await mastery.clickAction(mastery.label('masteryNext'));
           await expect(page.locator('body')).toContainText(/2 \/ 10/);
           await mastery.expectReadingItem();
           const second = await mastery.readCurrentItem('correct');
           expect(second.percent).toBe(100);
 
           await context.setOffline(false);
-          await mastery.clickAction(/^\s*next/i);
+          await mastery.clickAction(mastery.label('masteryNext'));
           await expect(page.locator('body')).toContainText(/3 \/ 10/);
           await mastery.expectReadingItem();
           test.info().annotations.push({ type: 'behaviour', description: `Offline: "${offline.headline}" (${offline.percent}%) → NEXT; items 1–2 read offline, item 3 after reconnecting. Practice is scored in the browser.` });
@@ -403,19 +415,21 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
           await mastery.steps.expectStepIntro('S1');
           await mastery.steps.startCurrentStep();
           await mastery.expectReadingItem();
-          await expect(mastery.hearts()).toHaveAttribute('aria-label', /5 hearts left/i);
+          const fiveHearts = mastery.text('showcaseHeartsLeft', { vars: { count: 5 } });
+          await expect(mastery.hearts()).toHaveAttribute('aria-label', fiveHearts);
 
           // The evaluation request fails as if the connection dropped (registered last, so it wins over the stub).
           await context.route('**/scores/updateLearnerProfile/**', (route) => route.abort('internetdisconnected'));
           const failed = await mastery.readCurrentItem('correct');
           test.info().annotations.push({ type: 'behaviour', description: `Evaluation failed: "${failed.headline}" ${failed.sub} → ${failed.action}; hearts: ${await mastery.hearts().getAttribute('aria-label')}` });
-          await expect.soft(mastery.hearts(), 'a network failure must not cost the learner a heart').toHaveAttribute('aria-label', /5 hearts left/i);
-          expect.soft(`${failed.headline} ${failed.sub}`, 'the learner is told the check failed (network), not that they misread').toMatch(/network|connection|offline|internet|couldn.t (check|connect)|something went wrong/i);
+          await expect.soft(mastery.hearts(), 'a network failure must not cost the learner a heart').toHaveAttribute('aria-label', fiveHearts);
+          const networkMessage = new RegExp(`network|connection|offline|internet|couldn.t (check|connect)|something went wrong|${mastery.text('resultLoadFailed').source}`, 'i');
+          expect.soft(`${failed.headline} ${failed.sub}`, 'the learner is told the check failed (network), not that they misread').toMatch(networkMessage);
 
           // Connection back: the learner can carry on and the next reading is evaluated normally.
           await context.unroute('**/scores/updateLearnerProfile/**');
           await stubShowcaseVerdict(context, 'pass');
-          await mastery.clickAction(/^\s*(next|try again|retry)/i);
+          await mastery.clickAction(mastery.label(['masteryNext', 'masteryTryAgain']));
           await mastery.expectReadingItem();
           const after = await mastery.readCurrentItem('correct');
           expect(after.percent, 'evaluation works again once the network is back').toBe(100);
@@ -450,7 +464,7 @@ export function defineMasterySuite(cases: MasterySheetCases): void {
       const [s1] = await mastery.playNodes(['S1'], { reading: 'wrong' });
       attachSteps([s1]);
       expect(s1.outcome, 'S1 verdict').toBe('fail');
-      expect(s1.notes.join(' ')).toMatch(/S1 not quite yet/);
+      expect(s1.notes.join(' ')).toMatch(mastery.text('showcaseNotYet', { vars: { step: 'S1' } }));
       expect(s1.nextNode, S1_ROUTE_NOTE).toBe('P1');
       expect(stage.saved.at(-1)).toMatchObject({ milestoneLevel: level.toLowerCase(), lesson: '0' });
       test.info().annotations.push({ type: 'sheet mismatch', description: S1_ROUTE_NOTE });

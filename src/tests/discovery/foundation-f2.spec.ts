@@ -1,9 +1,11 @@
+import { gotoApp } from '../../utils/appNav';
 import type { BrowserContext, Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/appTest';
 import { RoadmapPage } from '../../pages/discovery/RoadmapPage';
 import { FoundationPage, describeSteps } from '../../pages/foundation/FoundationPage';
 import { newSharedAppPage } from '../../utils/DiscoveryHelper';
 import { mintGuestSession } from '../../utils/guestSession';
+import { copyRe } from '../../utils/UiCopy';
 import { overrideStage } from '../../utils/stageOverride';
 
 /**
@@ -42,11 +44,12 @@ test.describe('Foundation F2', () => {
     test.setTimeout(45 * 60_000);
     test.info().annotations.push({ type: 'setup', description: 'Fresh guest opened on F2 via stage override (stageOverride.ts); F1→F2 transition is checked in TC-019.' });
 
-    await page.goto('/roadmap');
+    await gotoApp(page, '/roadmap');
     const roadmap = new RoadmapPage(page, lang);
     await roadmap.expectActiveStage('F2');
     await roadmap.startStageActivity('F2');
-    await foundation.expectStepIntro('L1', /Letter Train/i);
+    // F2 learn steps are Letter Train in English and Barakhadi in Hindi/Telugu/Kannada (app config).
+    await foundation.expectStepIntro('L1', copyRe(lang.code === 'en' ? 'mechanicLetterTrain' : 'mechanicBarakhadi', lang));
 
     const steps = await foundation.playNodes(['L1', 'P1', 'L2', 'P2', 'L3', 'P3', 'A1']);
     test.info().annotations.push({ type: 'nodes played', description: describeSteps(steps) });

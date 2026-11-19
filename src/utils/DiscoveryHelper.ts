@@ -28,6 +28,7 @@ export async function newSharedAppPage(
   const use = testInfo.project.use;
   const context = await browser.newContext({
     baseURL: use.baseURL,
+    serviceWorkers: use.serviceWorkers,
     viewport: use.viewport,
     permissions: use.permissions,
     locale: use.locale,
