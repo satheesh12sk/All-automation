@@ -1,9 +1,11 @@
+import { gotoApp } from '../../utils/appNav';
 import type { BrowserContext, Page } from '@playwright/test';
 import { test, expect } from '../../fixtures/appTest';
 import { RoadmapPage } from '../../pages/discovery/RoadmapPage';
 import { FoundationPage, type StepResult } from '../../pages/foundation/FoundationPage';
 import { newSharedAppPage } from '../../utils/DiscoveryHelper';
 import { mintGuestSession } from '../../utils/guestSession';
+import { copyRe } from '../../utils/UiCopy';
 
 /**
  * Foundation F1 — TC-013..TC-019 (testcase/DiscoveryFullFlow.csv), on the new UI.
@@ -58,10 +60,10 @@ test.describe('Foundation F1', () => {
 
   test('TC-013 Start F1 from the roadmap opens the F1 landing @regression', async ({ lang }) => {
     const roadmap = new RoadmapPage(page, lang);
-    await page.goto('/roadmap');
+    await gotoApp(page, '/roadmap');
     await roadmap.expectActiveStage('F1');
     await roadmap.startStageActivity('F1');
-    await foundation.expectStepIntro('L1', /Letter Train/i);
+    await foundation.expectStepIntro('L1', copyRe('mechanicLetterTrain', lang));
   });
 
   test('TC-014 complete the L1 Letter Train and land on P1 @regression', async () => {
@@ -81,10 +83,10 @@ test.describe('Foundation F1', () => {
     await playThrough(['L2', 'P2'], 'L3');
   });
 
-  test('TC-017 complete L3 and P3 and reach the A1 Apply challenge @regression', async () => {
+  test('TC-017 complete L3 and P3 and reach the A1 Apply challenge @regression', async ({ lang }) => {
     test.setTimeout(15 * 60_000);
     await playThrough(['L3', 'P3'], 'A1');
-    await foundation.expectStepIntro('A1', /Letter Hunt/i);
+    await foundation.expectStepIntro('A1', copyRe('mechanicLetterHunt', lang));
   });
 
   test('TC-018 complete A1 then L4/P4, L5/P5, L6/P6 and reach A2 @regression', async () => {
@@ -97,7 +99,7 @@ test.describe('Foundation F1', () => {
     await playThrough(['A2', 'L7', 'P7', 'L8', 'P8', 'L9', 'P9', 'A3'], 'COMPLETE');
 
     // F1 → F2 transition (the part of TC-020 that needs a real learner): F2 is now the active stage.
-    await page.goto('/roadmap');
+    await gotoApp(page, '/roadmap');
     await new RoadmapPage(page, lang).expectActiveStage('F2');
   });
 });

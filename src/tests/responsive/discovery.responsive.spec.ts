@@ -1,30 +1,32 @@
+import { gotoApp } from '../../utils/appNav';
 import { test, expect, runOn } from '../../fixtures/responsiveTest';
 import { AppHeader } from '../../pages/common/AppHeader';
 import { AssessmentPage } from '../../pages/discovery/AssessmentPage';
 import { LanguagePicker } from '../../pages/discovery/LanguagePicker';
 import { PlacementPage } from '../../pages/discovery/PlacementPage';
 import { newSharedAppPage } from '../../utils/DiscoveryHelper';
+import { copyRe } from '../../utils/UiCopy';
 import { authFile, completeDiscovery, mintGuestSession } from '../../utils/guestSession';
 import { expectNoHorizontalOverflow, expectUsableWithoutScrolling, smallTapTargets } from '../../utils/layoutAudit';
 
 /**
  * UI-04, UI-08..UI-10 — screens inside Discovery (UI/UX test plan §3).
- * Read-only cases share the guest from .auth/discover.json; cases that start the assessment
+ * Read-only cases share the guest from .auth/discover.json (discover-<lang>.json for other languages); cases that start the assessment
  * mint their own guest so parallel projects never step on each other's progress.
  */
 
 test.describe('shared guest on /discover', () => {
   test.use({ storageState: authFile('discover') });
 
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/discover');
-    await new AssessmentPage(page).expectStartAssessmentVisible();
+  test.beforeEach(async ({ page, lang }) => {
+    await gotoApp(page, '/discover');
+    await new AssessmentPage(page, lang).expectStartAssessmentVisible();
   });
 
-  test('UI-08 modals: close control is visible and dismisses without covering the screen @responsive', async ({ page }) => {
+  test('UI-08 modals: close control is visible and dismisses without covering the screen @responsive', async ({ page, lang }) => {
     runOn('phone', 'tablet', 'laptop', 'desktop');
     const picker = new LanguagePicker(page);
-    const assessment = new AssessmentPage(page);
+    const assessment = new AssessmentPage(page, lang);
 
     await picker.open();
     await expectUsableWithoutScrolling(picker.closeButton(), 'modal close (×)');
@@ -40,15 +42,15 @@ test.describe('shared guest on /discover', () => {
     if (small.length) test.info().annotations.push({ type: 'tap-target < 44px', description: small.join(', ') });
   });
 
-  test('UI-09 navigation menu (☰ Guest): opens, lists items and closes @responsive', async ({ page }) => {
+  test('UI-09 navigation menu (☰ Guest): opens, lists items and closes @responsive', async ({ page, lang }) => {
     runOn('phone', 'tablet', 'laptop', 'desktop');
     const header = new AppHeader(page);
-    const assessment = new AssessmentPage(page);
+    const assessment = new AssessmentPage(page, lang);
 
     await expectUsableWithoutScrolling(header.menuTrigger(), 'menu control');
     await header.openMenu();
     await expectUsableWithoutScrolling(header.menu(), 'menu');
-    await expect(header.menu()).toContainText(/Instruction Language/i);
+    await expect(header.menu()).toContainText(copyRe('instructionLanguage', lang));
     await expectUsableWithoutScrolling(header.signOut(), 'Sign Out item');
     await expectNoHorizontalOverflow(page);
 
@@ -58,14 +60,14 @@ test.describe('shared guest on /discover', () => {
 });
 
 test.describe('own guest (starts the assessment)', () => {
-  test('UI-04 discovery result: the roadmap control is reachable and not covered @responsive', async ({ browser }, testInfo) => {
+  test('UI-04 discovery result: the roadmap control is reachable and not covered @responsive', async ({ browser, lang }, testInfo) => {
     runOn('phone', 'tablet', 'laptop', 'desktop');
     test.setTimeout(6 * 60_000);
     const { context, page } = await newSharedAppPage(browser, testInfo, await mintGuestSession('discover'));
     try {
-      await page.goto('/discover');
+      await gotoApp(page, '/discover');
       await completeDiscovery(page);
-      const placement = new PlacementPage(page);
+      const placement = new PlacementPage(page, lang);
 
       await expectNoHorizontalOverflow(page);
       await expectUsableWithoutScrolling(placement.placementHeading(), 'result heading');
@@ -77,7 +79,7 @@ test.describe('own guest (starts the assessment)', () => {
     }
   });
 
-  test('UI-10 orientation change keeps the active screen and its controls @responsive', async ({ browser }, testInfo) => {
+  test('UI-10 orientation change keeps the active screen and its controls @responsive', async ({ browser, lang }, testInfo) => {
     runOn('tablet');
     test.setTimeout(3 * 60_000);
     const { context, page } = await newSharedAppPage(browser, testInfo, await mintGuestSession('discover'));
@@ -86,8 +88,8 @@ test.describe('own guest (starts the assessment)', () => {
       await page.setViewportSize({ width: height, height: width });
     };
     try {
-      const assessment = new AssessmentPage(page);
-      await page.goto('/discover');
+      const assessment = new AssessmentPage(page, lang);
+      await gotoApp(page, '/discover');
       await assessment.expectStartAssessmentVisible();
 
       await rotate(); // → landscape
@@ -107,7 +109,7 @@ test.describe('own guest (starts the assessment)', () => {
       await assessment.clickStop();
 
       await rotate(); // → landscape
-      await expect(assessment.sentenceText()).toHaveText(/This is how it works/i);
+      await expect(assessment.sentenceText()).toHaveText(copyRe('demoItemText', lang));
       await expectUsableWithoutScrolling(assessment.playButton(), 'play (landscape)');
       await expectUsableWithoutScrolling(assessment.retryButton(), 'retry (landscape)');
       await expectUsableWithoutScrolling(assessment.nextButton(), 'CONTINUE (landscape)');

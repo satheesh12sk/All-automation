@@ -46,7 +46,8 @@ export type AssessmentState = 'item' | 'setComplete' | 'letters' | 'evaluating';
  * "n / total" counter) above a card holding the text to read and the controls:
  *   idle      → mic button                      ([class*="_micWrap_"] > button)
  *   recording → stop button (square icon)       ([class*="_controls_"] > button:has(svg rect))
- *   recorded  → play (triangle) + retry (arrow) ([class*="_reviewControls_"] > button)
+ *   recorded  → play + retry ([class*="_reviewControls_"] > button, in that order; unlabelled,
+ *               and the play icon changes between builds — triangle or speaker)
  *              and a green "CONTINUE ➔" that moves to the next item (the old orange "next").
  * After the last item of a set: "Set N Complete" + "START SET N+1 ➔".
  *
@@ -83,8 +84,8 @@ export class AssessmentPage {
     // ---- Recording controls ----
     mikeButton = () => this.page.locator('[class*="_micWrap_"] > button');
     stopButton = () => this.page.locator('[class*="_controls_"] > button:has(svg rect)');
-    playButton = () => this.page.locator('[class*="_reviewControls_"] > button:has(svg polygon)');
-    retryButton = () => this.page.locator('[class*="_reviewControls_"] > button:has(svg path)');
+    playButton = () => this.page.locator('[class*="_reviewControls_"] > button').first();
+    retryButton = () => this.page.locator('[class*="_reviewControls_"] > button').last();
     // "CONTINUE ➔" — moves to the next item (replaces the old build's separate Next button).
     nextButton = () => this.page.locator('[class*="_controls_"] > button.all-btn').filter({ hasText: this.copy.continueLabel });
 

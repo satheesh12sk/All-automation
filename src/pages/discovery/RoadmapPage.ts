@@ -37,7 +37,7 @@ export class RoadmapPage {
         await this.startActivityButton(stage).click();
         await this.page.waitForURL(/\/milestone-intro/, { timeout: 30000 });
         await this.startActivityButton(stage).click();
-        await this.page.waitForURL(/\/learn/, { timeout: 30000 });
+        await this.page.waitForURL(/\/learn(\?|$)/, { timeout: 30000 });
     }
 
     // ============================================

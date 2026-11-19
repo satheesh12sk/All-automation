@@ -3,32 +3,33 @@ import { DiscoveryLoginPage } from '../../pages/discovery/LoginPage';
 import { LanguagePicker } from '../../pages/discovery/LanguagePicker';
 import { MicrophoneTestPage } from '../../pages/discovery/MicTestPage';
 import { mintGuestCredentials } from '../../utils/DiscoveryHelper';
-import { languageByCode } from '../../utils/languages';
 import { copyRe } from '../../utils/UiCopy';
 import { expectNoHorizontalOverflow, expectUsableWithoutScrolling, smallTapTargets } from '../../utils/layoutAudit';
 
-/** UI-01..UI-03 — login page and audio check (UI/UX test plan §3). No stored session: these start logged out. */
+/**
+ * UI-01..UI-03 — login page and audio check (UI/UX test plan §3). No stored session: these start
+ * logged out. The login page is switched to the run's language first, as its learners would.
+ */
 
-test('UI-01 login page: STUDENT/GUEST switch, language selector and login button are visible and usable @responsive', async ({ page }) => {
+test('UI-01 login page: STUDENT/GUEST switch, language selector and login button are visible and usable @responsive', async ({ page, lang }) => {
   runOn('phone', 'tablet', 'laptop', 'desktop');
-  const login = new DiscoveryLoginPage(page);
+  const login = await DiscoveryLoginPage.openIn(page, lang);
   const picker = new LanguagePicker(page);
-  await login.navigate();
   await expectNoHorizontalOverflow(page);
 
   await expectUsableWithoutScrolling(login.studentTab(), 'STUDENT tab');
   await expectUsableWithoutScrolling(login.guestTab(), 'GUEST tab');
   await expectUsableWithoutScrolling(picker.pill(), 'language selector');
   // Disabled until the form is filled in — placement is what matters here.
-  await expectUsableWithoutScrolling(page.getByRole('button', { name: /^login as/i }), 'login button', { requireEnabled: false });
+  await expectUsableWithoutScrolling(page.getByRole('button', { name: copyRe(['loginAsStudent', 'loginAsGuest'], lang) }), 'login button', { requireEnabled: false });
 
   // The switch works both ways: Grade only exists on the Guest tab.
   await login.guestTab().click();
-  await expect(login.activeTab()).toHaveText(/guest/i);
+  await expect(login.activeTab()).toHaveText(copyRe('guestTab', lang));
   await expect(login.gradeSelect()).toBeVisible();
   await expectUsableWithoutScrolling(login.loginButton(), 'LOGIN AS GUEST', { requireEnabled: false });
   await login.studentTab().click();
-  await expect(login.activeTab()).toHaveText(/student/i);
+  await expect(login.activeTab()).toHaveText(copyRe('studentTab', lang));
   await expect(login.gradeSelect()).toBeHidden();
 
   // The language selector opens its list, inside the screen, and closes again.
@@ -41,16 +42,14 @@ test('UI-01 login page: STUDENT/GUEST switch, language selector and login button
   if (small.length) test.info().annotations.push({ type: 'tap-target < 44px', description: small.join(', ') });
 });
 
-test('UI-02 guest login: grade dropdown lists Grade 1 to Grade 5 and a grade is required to submit @responsive', async ({ page }) => {
+test('UI-02 guest login: grade dropdown lists Grade 1 to Grade 5 and a grade is required to submit @responsive', async ({ page, lang, ui }) => {
   runOn('phone', 'laptop');
-  const login = new DiscoveryLoginPage(page);
-  const english = languageByCode('english');
-  await login.navigate();
+  const login = await DiscoveryLoginPage.openIn(page, lang);
   await login.selectGuestTab();
   await expectUsableWithoutScrolling(login.gradeSelect(), 'Grade dropdown');
 
   const options = (await login.gradeSelect().locator('option').allTextContents()).map((o) => o.trim());
-  expect(options).toEqual(['Select Grade', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5']);
+  expect(options).toEqual([ui('gradePlaceholder'), ...[1, 2, 3, 4, 5].map((n) => ui('gradeOption').replace('{number}', String(n)))]);
 
   // Without a grade the form must not submit (either a disabled button or a "Select a grade" error).
   const { username, password } = mintGuestCredentials();
@@ -58,7 +57,7 @@ test('UI-02 guest login: grade dropdown lists Grade 1 to Grade 5 and a grade is 
   await login.enterPassword(password);
   if (await login.loginButton().isEnabled()) {
     await login.clickLogin();
-    await expect(page.getByText(copyRe('loginErrorGrade', english, { exact: true }))).toBeVisible();
+    await expect(page.getByText(copyRe('loginErrorGrade', lang, { exact: true }))).toBeVisible();
     await login.expectOnLoginPage();
   }
 
@@ -69,7 +68,7 @@ test('UI-02 guest login: grade dropdown lists Grade 1 to Grade 5 and a grade is 
   await expect(page).toHaveURL(/\/audio-check/, { timeout: 30000 });
 });
 
-test('UI-03 microphone check: prompt text, Try Again and Skip controls are reachable without scrolling @responsive', async ({ page }) => {
+test('UI-03 microphone check: prompt text, Try Again and Skip controls are reachable without scrolling @responsive', async ({ page, lang }) => {
   runOn('phone', 'tablet');
   test.setTimeout(3 * 60_000);
   // Make the check fail deterministically so the error state and TRY AGAIN appear: hand the app a
@@ -78,10 +77,9 @@ test('UI-03 microphone check: prompt text, Try Again and Skip controls are reach
   await page.addInitScript(() => {
     navigator.mediaDevices.getUserMedia = async () => new AudioContext().createMediaStreamDestination().stream;
   });
-  const login = new DiscoveryLoginPage(page);
-  const mic = new MicrophoneTestPage(page);
+  const login = await DiscoveryLoginPage.openIn(page, lang);
+  const mic = new MicrophoneTestPage(page, lang);
   const { username, password } = mintGuestCredentials();
-  await login.navigate();
   await login.login(username, password);
   await expectNoHorizontalOverflow(page);
 

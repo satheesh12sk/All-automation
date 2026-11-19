@@ -39,6 +39,8 @@ export interface CopyReOptions {
   space?: 'flexible';
   /** Values for `{placeholder}`s. An unfilled placeholder matches any text. */
   vars?: Record<string, string | number>;
+  /** RegExp sources for `{placeholder}`s, inserted unescaped, e.g. { step: 'S\\d' } (wins over `vars`). */
+  patterns?: Record<string, string>;
 }
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -50,7 +52,8 @@ export function copyRe(key: UiCopyKey | readonly UiCopyKey[], lang: AppLanguage,
     for (const part of text.split(/(\{\w+\})/)) {
       const ph = /^\{(\w+)\}$/.exec(part);
       if (ph) {
-        src += opts.vars && ph[1] in opts.vars ? escapeRe(String(opts.vars[ph[1]])) : '.+?';
+        if (opts.patterns && ph[1] in opts.patterns) src += `(?:${opts.patterns[ph[1]]})`;
+        else src += opts.vars && ph[1] in opts.vars ? escapeRe(String(opts.vars[ph[1]])) : '.+?';
         continue;
       }
       let lit = escapeRe(part);

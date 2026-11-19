@@ -55,8 +55,9 @@ export class LanguagePicker {
     // ASSERTIONS
     // ============================================
 
+    /** The pill names the language: natively on some screens, in English on others ("🌐 Telugu"). */
     async expectCurrent(lang: AppLanguage): Promise<void> {
-        await expect(this.pill()).toContainText(lang.nativeLabel);
+        await expect(this.pill()).toContainText(new RegExp(`${lang.nativeLabel}|${lang.englishLabel}`));
     }
 
     async expectDoneLabel(lang: AppLanguage): Promise<void> {
